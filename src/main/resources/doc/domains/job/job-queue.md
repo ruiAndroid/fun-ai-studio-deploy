@@ -101,6 +101,8 @@ application 层定义 `JobRepository`，核心点：
   - 有任务：`data` 为 `JobResponse`
   - 无任务：`data=null`（仍返回 code=200）
 
+补充（A 方案）：当 payload 中包含 `appId` 时，控制面会在 claim 响应中附带 `runtimeNode`（agentBaseUrl/gatewayBaseUrl），Runner 可直接调用对应 Runtime-Agent，无需再做二次 resolve。
+
 ### 5.4 Runner 心跳续租（heartbeat）
 
 - `POST /deploy/jobs/{jobId}/heartbeat`

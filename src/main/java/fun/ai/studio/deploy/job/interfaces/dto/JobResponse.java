@@ -3,6 +3,7 @@ package fun.ai.studio.deploy.job.interfaces.dto;
 import fun.ai.studio.deploy.job.domain.Job;
 import fun.ai.studio.deploy.job.domain.JobStatus;
 import fun.ai.studio.deploy.job.domain.JobType;
+import fun.ai.studio.deploy.runtime.domain.RuntimeNode;
 
 import java.time.Instant;
 import java.util.Map;
@@ -15,6 +16,11 @@ public class JobResponse {
     private String errorMessage;
     private String runnerId;
     private Instant leaseExpireAt;
+
+    /**
+     * 仅在 claim 时返回：控制面为本次 job 选择的 runtime 节点（agent/gateway）。
+     */
+    private RuntimeNode runtimeNode;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -29,6 +35,12 @@ public class JobResponse {
         resp.setLeaseExpireAt(job.getLeaseExpireAt());
         resp.setCreatedAt(job.getCreatedAt());
         resp.setUpdatedAt(job.getUpdatedAt());
+        return resp;
+    }
+
+    public static JobResponse from(Job job, RuntimeNode runtimeNode) {
+        JobResponse resp = from(job);
+        resp.setRuntimeNode(runtimeNode);
         return resp;
     }
 
@@ -86,6 +98,14 @@ public class JobResponse {
 
     public void setLeaseExpireAt(Instant leaseExpireAt) {
         this.leaseExpireAt = leaseExpireAt;
+    }
+
+    public RuntimeNode getRuntimeNode() {
+        return runtimeNode;
+    }
+
+    public void setRuntimeNode(RuntimeNode runtimeNode) {
+        this.runtimeNode = runtimeNode;
     }
 
     public Instant getCreatedAt() {

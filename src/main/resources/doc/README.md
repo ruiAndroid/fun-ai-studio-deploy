@@ -5,5 +5,6 @@
 ## 目录
 
 - `domains/job/job-queue.md`：Job 任务队列（Runner 轮询）说明
+- `domains/runtime/runtime-nodes.md`：Runtime 节点注册表/选址/运维（Runner + Runtime-Agent）
 
 

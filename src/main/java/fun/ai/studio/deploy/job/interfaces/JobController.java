@@ -2,6 +2,8 @@ package fun.ai.studio.deploy.job.interfaces;
 
 import fun.ai.studio.common.Result;
 import fun.ai.studio.deploy.job.application.JobService;
+import fun.ai.studio.deploy.runtime.application.RuntimePlacementService;
+import fun.ai.studio.deploy.runtime.domain.RuntimeNode;
 import fun.ai.studio.deploy.job.domain.Job;
 import fun.ai.studio.deploy.job.interfaces.dto.CreateJobRequest;
 import fun.ai.studio.deploy.job.interfaces.dto.ClaimJobRequest;
@@ -22,9 +24,11 @@ import java.util.stream.Collectors;
 public class JobController {
 
     private final JobService jobService;
+    private final RuntimePlacementService runtimePlacementService;
 
-    public JobController(JobService jobService) {
+    public JobController(JobService jobService, RuntimePlacementService runtimePlacementService) {
         this.jobService = jobService;
+        this.runtimePlacementService = runtimePlacementService;
     }
 
     @PostMapping
@@ -65,7 +69,19 @@ public class JobController {
     @PostMapping("/claim")
     public Result<JobResponse> claim(@Valid @RequestBody ClaimJobRequest req) {
         Optional<Job> job = jobService.claimNext(req.getRunnerId(), Duration.ofSeconds(req.getLeaseSeconds()));
-        return Result.success(job.map(JobResponse::from).orElse(null));
+        if (job.isEmpty()) return Result.success(null);
+
+        Job j = job.get();
+        // A 方案：claim 时返回 runtime 节点信息（由控制面决定）
+        RuntimeNode node = null;
+        try {
+            Object appId = j.getPayload() == null ? null : j.getPayload().get("appId");
+            if (appId != null) {
+                node = runtimePlacementService.resolveNode(String.valueOf(appId));
+            }
+        } catch (Exception ignore) {
+        }
+        return Result.success(JobResponse.from(j, node));
     }
 
     /**
