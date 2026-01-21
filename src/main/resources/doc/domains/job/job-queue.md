@@ -79,17 +79,29 @@ application 层定义 `JobRepository`，核心点：
 
 统一前缀：`/deploy/jobs`
 
+### 5.0 内部鉴权（API -> Deploy）
+
+为避免 Deploy 控制面接口被直接暴露/滥用，Deploy 支持对“控制面调用接口”开启内部鉴权：
+
+- Header：`X-DEPLOY-SECRET: <sharedSecret>`
+- Deploy 配置：`deploy.proxy-auth.enabled=true`、`deploy.proxy-auth.shared-secret=...`
+- 约束：**仅保护**创建/查询/列表/控制类接口；Runner 的 `claim/heartbeat/report` 默认放行
+
 ### 5.1 创建 Job（控制面/后台）
 
 - `POST /deploy/jobs`
 - body：`CreateJobRequest`
   - `type`：JobType（目前：`BUILD_AND_DEPLOY`）
   - `payload`：扩展字段 Map（如：`appId/repoUrl/commit/env`）
+  
+> 当启用 `deploy.proxy-auth.enabled=true` 时，调用方（API）必须带 `X-DEPLOY-SECRET`。
 
 ### 5.2 查询 / 列表
 
 - `GET /deploy/jobs/{jobId}`
 - `GET /deploy/jobs?limit=50`
+
+> 当启用 `deploy.proxy-auth.enabled=true` 时，调用方（API）必须带 `X-DEPLOY-SECRET`。
 
 ### 5.3 Runner 轮询领取（claim）
 
