@@ -2,6 +2,7 @@ package fun.ai.studio.deploy.job.interfaces;
 
 import fun.ai.studio.common.Result;
 import fun.ai.studio.deploy.job.application.JobService;
+import fun.ai.studio.deploy.runner.application.RunnerRegistryService;
 import fun.ai.studio.deploy.runtime.application.RuntimePlacementService;
 import fun.ai.studio.deploy.runtime.domain.RuntimeNode;
 import fun.ai.studio.deploy.job.domain.Job;
@@ -25,10 +26,12 @@ public class JobController {
 
     private final JobService jobService;
     private final RuntimePlacementService runtimePlacementService;
+    private final RunnerRegistryService runnerRegistry;
 
-    public JobController(JobService jobService, RuntimePlacementService runtimePlacementService) {
+    public JobController(JobService jobService, RuntimePlacementService runtimePlacementService, RunnerRegistryService runnerRegistry) {
         this.jobService = jobService;
         this.runtimePlacementService = runtimePlacementService;
+        this.runnerRegistry = runnerRegistry;
     }
 
     @PostMapping
@@ -68,6 +71,7 @@ public class JobController {
      */
     @PostMapping("/claim")
     public Result<JobResponse> claim(@Valid @RequestBody ClaimJobRequest req) {
+        if (runnerRegistry != null) runnerRegistry.touch(req == null ? null : req.getRunnerId());
         Optional<Job> job = jobService.claimNext(req.getRunnerId(), Duration.ofSeconds(req.getLeaseSeconds()));
         if (job.isEmpty()) return Result.success(null);
 
@@ -89,6 +93,7 @@ public class JobController {
      */
     @PostMapping("/{jobId}/heartbeat")
     public Result<JobResponse> heartbeat(@PathVariable String jobId, @Valid @RequestBody HeartbeatJobRequest req) {
+        if (runnerRegistry != null) runnerRegistry.touch(req == null ? null : req.getRunnerId());
         Job job = jobService.heartbeat(jobId, req.getRunnerId(), Duration.ofSeconds(req.getExtendSeconds()));
         return Result.success(JobResponse.from(job));
     }
@@ -98,6 +103,7 @@ public class JobController {
      */
     @PostMapping("/{jobId}/report")
     public Result<JobResponse> report(@PathVariable String jobId, @Valid @RequestBody ReportJobRequest req) {
+        if (runnerRegistry != null) runnerRegistry.touch(req == null ? null : req.getRunnerId());
         Job job = jobService.report(jobId, req.getRunnerId(), req.getStatus(), req.getErrorMessage());
         return Result.success(JobResponse.from(job));
     }
