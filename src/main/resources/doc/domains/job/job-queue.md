@@ -61,7 +61,7 @@ Job 模块按四层拆分，依赖方向固定：
 - `runnerId`：当前领取该任务的 runner 标识（仅 RUNNING 期有效）
 - `leaseExpireAt`：租约到期时间；runner 必须在到期前 heartbeat 续租（回收策略后续补）
 
-## 4. 仓储抽象与 InMemory 实现
+## 4. 仓储抽象与存储实现（InMemory / DB）
 
 ### 4.1 Repository 抽象
 
@@ -73,7 +73,24 @@ application 层定义 `JobRepository`，核心点：
 
 当前提供 `InMemoryJobRepository`（用于本地开发/单测），其 `claimNext` 通过同步锁保证同一时刻不会被多个 Runner 抢到同一个 Job。
 
-> 后续落地 MySQL/Mongo 时，需要用“事务 + 条件更新（WHERE status=PENDING）”保证原子性。
+### 4.3 DB 落库（推荐生产开启）
+
+Deploy 支持将 Job 队列落库到 MySQL（JPA），避免 Deploy 重启丢任务状态，并支持审计/追溯。
+
+- 开关：`deploy.job.persistence.enabled=true`
+- 依赖：配置 `spring.datasource.*`
+- 表：`fun_ai_deploy_job`
+  - `id`（主键，jobId）
+  - `type` / `status`
+  - `payload_json`
+  - `runner_id` / `lease_expire_at`
+  - `error_message`
+  - `create_time` / `update_time`
+
+并发语义：
+
+- `claimNext` 仍为 FIFO（按 `create_time` 最早优先）
+- 多 runner 并发时使用 **乐观锁重试**，保证不会重复领取同一个 Job
 
 ## 5. 对外接口（Deploy 控制面）
 

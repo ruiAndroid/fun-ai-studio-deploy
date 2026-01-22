@@ -4,7 +4,6 @@ import fun.ai.studio.deploy.job.application.JobRepository;
 import fun.ai.studio.deploy.job.domain.Job;
 import fun.ai.studio.deploy.job.domain.JobId;
 import fun.ai.studio.deploy.job.domain.JobStatus;
-import org.springframework.stereotype.Repository;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -17,7 +16,6 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * InMemory 实现：用于本地开发/单测；后续替换 MySQL/Mongo 不影响应用层/接口层。
  */
-@Repository
 public class InMemoryJobRepository implements JobRepository {
 
     private final ConcurrentMap<String, Job> store = new ConcurrentHashMap<>();

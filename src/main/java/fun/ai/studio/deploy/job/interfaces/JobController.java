@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import fun.ai.studio.deploy.runtime.run.application.DeployAppRunService;
 
 @RestController
 @RequestMapping("/deploy/jobs")
@@ -27,11 +28,16 @@ public class JobController {
     private final JobService jobService;
     private final RuntimePlacementService runtimePlacementService;
     private final RunnerRegistryService runnerRegistry;
+    private final DeployAppRunService appRunService;
 
-    public JobController(JobService jobService, RuntimePlacementService runtimePlacementService, RunnerRegistryService runnerRegistry) {
+    public JobController(JobService jobService,
+                         RuntimePlacementService runtimePlacementService,
+                         RunnerRegistryService runnerRegistry,
+                         DeployAppRunService appRunService) {
         this.jobService = jobService;
         this.runtimePlacementService = runtimePlacementService;
         this.runnerRegistry = runnerRegistry;
+        this.appRunService = appRunService;
     }
 
     @PostMapping
@@ -105,6 +111,10 @@ public class JobController {
     public Result<JobResponse> report(@PathVariable String jobId, @Valid @RequestBody ReportJobRequest req) {
         if (runnerRegistry != null) runnerRegistry.touch(req == null ? null : req.getRunnerId());
         Job job = jobService.report(jobId, req.getRunnerId(), req.getStatus(), req.getErrorMessage());
+        try {
+            if (appRunService != null) appRunService.touchFromJob(job);
+        } catch (Exception ignore) {
+        }
         return Result.success(JobResponse.from(job));
     }
 }

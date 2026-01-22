@@ -3,7 +3,6 @@ package fun.ai.studio.deploy.runtime.infrastructure;
 import fun.ai.studio.deploy.runtime.application.RuntimePlacementRepository;
 import fun.ai.studio.deploy.runtime.domain.RuntimeNodeId;
 import fun.ai.studio.deploy.runtime.domain.RuntimePlacement;
-import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -12,7 +11,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-@Repository
 public class InMemoryRuntimePlacementRepository implements RuntimePlacementRepository {
     private final ConcurrentMap<String, RuntimePlacement> byAppId = new ConcurrentHashMap<>();
 

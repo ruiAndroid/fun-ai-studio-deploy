@@ -28,6 +28,43 @@ Runtime 注册表/心跳：
 - `deploy.runtime-node-registry.allowed-ips=`（可选）
 - `deploy.runtime-node-registry.heartbeat-stale-seconds=60`
 
+落库（建议生产开启，避免 Deploy 重启丢数据）：
+
+- `deploy.runtime.persistence.enabled=true`
+- `spring.datasource.url=...`
+- `spring.datasource.username=...`
+- `spring.datasource.password=...`
+- （建议）`spring.jpa.hibernate.ddl-auto=update`
+
+### 2.1 落库表（命名风格对齐 API 的 fun_ai_workspace_*）
+
+Deploy 会维护两张表：
+
+- `fun_ai_deploy_runtime_node`：runtime 节点注册表
+  - `id`（主键，long）
+  - `name`（唯一）
+  - `agent_base_url` / `gateway_base_url`
+  - `enabled`（0/1）
+  - `weight`
+  - `last_heartbeat_at`（datetime）
+  - `create_time` / `update_time`（datetime）
+- `fun_ai_deploy_runtime_placement`：`app_id -> node_id` 粘性落点
+  - `app_id`（主键）
+  - `node_id`
+  - `last_active_at`（bigint，epoch ms）
+  - `create_time` / `update_time`（datetime）
+
+以及一张 “last-known” 表（对齐 API 的 `fun_ai_workspace_run` 用途）：
+
+- `fun_ai_deploy_app_run`：应用最后一次部署观测（last-known）
+  - `app_id`（主键）
+  - `node_id`（当前落点）
+  - `last_job_id` / `last_job_status`
+  - `last_error`
+  - `last_deployed_at`（epoch ms；仅 SUCCEEDED 时刷新）
+  - `last_active_at`（epoch ms；每次 report 刷新）
+  - `create_time` / `update_time`（datetime）
+
 ## 3. 节点心跳协议
 
 请求：
@@ -52,7 +89,9 @@ Runtime 注册表/心跳：
   - `agentBaseUrl/gatewayBaseUrl` 非空
   - 心跳新鲜（未超过 stale 阈值）
 
-> 当前实现为 InMemory（便于快速跑通闭环）；后续可替换为 DB 存储（不影响接口层）。
+> 当前默认实现为 InMemory（不依赖 DB）；生产建议开启 DB 落库，避免 Deploy 重启丢节点/落点数据：  
+> - `deploy.runtime.persistence.enabled=true`  
+> - 配置 `spring.datasource.url/username/password`（建议 MySQL）
 
 ## 5. 运维接口（admin）
 

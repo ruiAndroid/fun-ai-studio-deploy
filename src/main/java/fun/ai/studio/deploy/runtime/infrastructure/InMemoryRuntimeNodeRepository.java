@@ -3,7 +3,6 @@ package fun.ai.studio.deploy.runtime.infrastructure;
 import fun.ai.studio.deploy.runtime.application.RuntimeNodeRepository;
 import fun.ai.studio.deploy.runtime.domain.RuntimeNode;
 import fun.ai.studio.deploy.runtime.domain.RuntimeNodeId;
-import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +10,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-@Repository
 public class InMemoryRuntimeNodeRepository implements RuntimeNodeRepository {
     private final ConcurrentMap<Long, RuntimeNode> byId = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Long> idByName = new ConcurrentHashMap<>();

@@ -56,6 +56,24 @@ public final class Job {
         return new Job(JobId.newId(), type, JobStatus.PENDING, payload, null, null, null, now, now);
     }
 
+    /**
+     * 从持久化记录还原 Job（仅供仓储层使用）。
+     *
+     * 说明：
+     * - 不绕过状态机：外部仍应通过领域方法做状态流转；这里仅用于“读取/重建”。
+     */
+    public static Job restore(JobId id,
+                              JobType type,
+                              JobStatus status,
+                              Map<String, Object> payload,
+                              String errorMessage,
+                              String runnerId,
+                              Instant leaseExpireAt,
+                              Instant createdAt,
+                              Instant updatedAt) {
+        return new Job(id, type, status, payload, errorMessage, runnerId, leaseExpireAt, createdAt, updatedAt);
+    }
+
     public JobId getId() {
         return id;
     }

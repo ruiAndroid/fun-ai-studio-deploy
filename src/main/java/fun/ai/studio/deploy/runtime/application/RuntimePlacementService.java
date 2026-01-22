@@ -18,8 +18,10 @@ import java.util.Objects;
  * runtime 节点选址（控制面）：appId -> runtimeNode（粘性落点）。
  *
  * 说明：
- * - 当前实现为 InMemory repository（便于先跑通闭环）
- * - 后续替换 DB repository 不影响本服务/接口层
+ * - 默认实现为 InMemory repository（不依赖 DB，便于先跑通闭环）
+ * - 生产建议开启 DB 落库（避免 Deploy 重启丢 runtime 节点与 placements）
+ *   - deploy.runtime.persistence.enabled=true
+ *   - 配置 spring.datasource.*
  */
 @Service
 public class RuntimePlacementService {
