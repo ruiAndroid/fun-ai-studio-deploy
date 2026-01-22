@@ -18,6 +18,11 @@ public interface JobRepository {
     List<Job> list(int limit);
 
     /**
+     * 互斥用：检查指定 appId 是否存在“进行中”的 Job（PENDING/RUNNING）。
+     */
+    boolean existsActiveJobForApp(String appId);
+
+    /**
      * 原子领取一个待执行任务（PENDING -> RUNNING）。
      * - 若无可领取任务，返回 empty
      * - 必须保证同一时刻只有一个 runner 能领取到同一个 job

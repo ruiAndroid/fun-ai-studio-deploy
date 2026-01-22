@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
         name = "fun_ai_deploy_job",
         indexes = {
                 @Index(name = "idx_fun_ai_deploy_job_status_create_time", columnList = "status,create_time"),
+                @Index(name = "idx_fun_ai_deploy_job_app_id_status", columnList = "app_id,status,create_time"),
                 @Index(name = "idx_fun_ai_deploy_job_runner_id", columnList = "runner_id"),
                 @Index(name = "idx_fun_ai_deploy_job_lease_expire_at", columnList = "lease_expire_at")
         }
@@ -24,6 +25,12 @@ public class JobEntity {
 
     @Column(name = "type", nullable = false, length = 64)
     private String type;
+
+    /**
+     * 互斥/查询优化字段：从 payload.appId 冗余出来。
+     */
+    @Column(name = "app_id", nullable = true, length = 64)
+    private String appId;
 
     @Column(name = "status", nullable = false, length = 32)
     private String status;
@@ -81,6 +88,14 @@ public class JobEntity {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getAppId() {
+        return appId;
+    }
+
+    public void setAppId(String appId) {
+        this.appId = appId;
     }
 
     public String getStatus() {

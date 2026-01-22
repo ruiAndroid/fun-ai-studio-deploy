@@ -82,10 +82,21 @@ Deploy 支持将 Job 队列落库到 MySQL（JPA），避免 Deploy 重启丢任
 - 表：`fun_ai_deploy_job`
   - `id`（主键，jobId）
   - `type` / `status`
+  - `app_id`（从 payload.appId 冗余出来：用于“同 appId 部署互斥”与索引优化）
   - `payload_json`
   - `runner_id` / `lease_expire_at`
   - `error_message`
   - `create_time` / `update_time`
+
+推荐 DDL（已上线老库需要手工执行一次）：
+
+```sql
+ALTER TABLE fun_ai_deploy_job
+  ADD COLUMN app_id VARCHAR(64) NULL AFTER type;
+
+CREATE INDEX idx_fun_ai_deploy_job_app_id_status
+  ON fun_ai_deploy_job (app_id, status, create_time);
+```
 
 并发语义：
 
@@ -159,7 +170,7 @@ Deploy 支持将 Job 队列落库到 MySQL（JPA），避免 Deploy 重启丢任
 ## 7. 错误码语义（Result.code）
 
 - `404`：Job 不存在（`NotFoundException`）
-- `409`：状态冲突/runnerId 不匹配/非法流转（`ConflictException`）
+- `409`：状态冲突/runnerId 不匹配/非法流转/同 appId 部署互斥（`ConflictException`）
 - `500`：未捕获异常
 
 ## 8. 后续演进建议（不破坏模块化）

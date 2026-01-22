@@ -41,6 +41,14 @@ public class InMemoryJobRepository implements JobRepository {
     }
 
     @Override
+    public boolean existsActiveJobForApp(String appId) {
+        if (appId == null || appId.isBlank()) return false;
+        return store.values().stream()
+                .anyMatch(j -> (j.getStatus() == JobStatus.PENDING || j.getStatus() == JobStatus.RUNNING)
+                        && appId.equals(String.valueOf(j.getPayload() == null ? null : j.getPayload().get("appId"))));
+    }
+
+    @Override
     public Optional<Job> claimNext(String runnerId, Duration leaseDuration) {
         if (leaseDuration == null || leaseDuration.isZero() || leaseDuration.isNegative()) {
             throw new IllegalArgumentException("leaseDuration 必须为正数");

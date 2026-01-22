@@ -1,6 +1,7 @@
 package fun.ai.studio.deploy.job.application;
 
 import fun.ai.studio.common.NotFoundException;
+import fun.ai.studio.common.ConflictException;
 import fun.ai.studio.deploy.job.domain.Job;
 import fun.ai.studio.deploy.job.domain.JobId;
 import fun.ai.studio.deploy.job.domain.JobStatus;
@@ -26,6 +27,11 @@ public class JobService {
     }
 
     public Job create(JobType type, Map<String, Object> payload) {
+        // 规则：同一 appId 的部署互斥（进行中 PENDING/RUNNING 不允许再创建）
+        String appId = extractAppId(payload);
+        if (appId != null && jobRepository.existsActiveJobForApp(appId)) {
+            throw new ConflictException("该应用正在部署中（appId=" + appId + "），请等待完成或先取消后再试");
+        }
         Job job = Job.create(type, payload);
         return jobRepository.save(job);
     }
@@ -83,6 +89,14 @@ public class JobService {
 
     public Job cancel(String jobId) {
         return transition(jobId, JobStatus.CANCELLED, null);
+    }
+
+    private static String extractAppId(Map<String, Object> payload) {
+        if (payload == null || payload.isEmpty()) return null;
+        Object v = payload.get("appId");
+        if (v == null) return null;
+        String s = String.valueOf(v);
+        return (s == null || s.isBlank()) ? null : s;
     }
 }
 

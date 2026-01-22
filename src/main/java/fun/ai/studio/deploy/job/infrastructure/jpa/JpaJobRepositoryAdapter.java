@@ -40,6 +40,7 @@ public class JpaJobRepositoryAdapter implements JobRepository {
         JobEntity e = jpa.findById(job.getId().value()).orElseGet(JobEntity::new);
         e.setId(job.getId().value());
         e.setType(job.getType() == null ? null : job.getType().name());
+        e.setAppId(extractAppId(job.getPayload()));
         e.setStatus(job.getStatus() == null ? null : job.getStatus().name());
         e.setErrorMessage(job.getErrorMessage());
         e.setRunnerId(job.getRunnerId());
@@ -70,6 +71,12 @@ public class JpaJobRepositoryAdapter implements JobRepository {
                 .stream()
                 .map(this::toDomain)
                 .toList();
+    }
+
+    @Override
+    public boolean existsActiveJobForApp(String appId) {
+        if (appId == null || appId.isBlank()) return false;
+        return jpa.existsByAppIdAndStatusIn(appId, List.of(JobStatus.PENDING.name(), JobStatus.RUNNING.name()));
     }
 
     @Override
@@ -133,6 +140,14 @@ public class JpaJobRepositoryAdapter implements JobRepository {
         } catch (Exception e) {
             return Collections.emptyMap();
         }
+    }
+
+    private static String extractAppId(Map<String, Object> payload) {
+        if (payload == null || payload.isEmpty()) return null;
+        Object v = payload.get("appId");
+        if (v == null) return null;
+        String s = String.valueOf(v);
+        return s.isBlank() ? null : s;
     }
 
     private static LocalDateTime toLocalDateTime(Instant at) {
