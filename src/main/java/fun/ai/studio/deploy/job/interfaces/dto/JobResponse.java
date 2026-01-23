@@ -21,6 +21,10 @@ public class JobResponse {
      * 仅在 claim 时返回：控制面为本次 job 选择的 runtime 节点（agent/gateway）。
      */
     private RuntimeNode runtimeNode;
+    /**
+     * 可访问预览地址（由 runtimeNode.gatewayBaseUrl + basePath 计算而来）。
+     */
+    private String previewUrl;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -41,6 +45,12 @@ public class JobResponse {
     public static JobResponse from(Job job, RuntimeNode runtimeNode) {
         JobResponse resp = from(job);
         resp.setRuntimeNode(runtimeNode);
+        return resp;
+    }
+
+    public static JobResponse from(Job job, RuntimeNode runtimeNode, String previewUrl) {
+        JobResponse resp = from(job, runtimeNode);
+        resp.setPreviewUrl(previewUrl);
         return resp;
     }
 
@@ -106,6 +116,14 @@ public class JobResponse {
 
     public void setRuntimeNode(RuntimeNode runtimeNode) {
         this.runtimeNode = runtimeNode;
+    }
+
+    public String getPreviewUrl() {
+        return previewUrl;
+    }
+
+    public void setPreviewUrl(String previewUrl) {
+        this.previewUrl = previewUrl;
     }
 
     public Instant getCreatedAt() {

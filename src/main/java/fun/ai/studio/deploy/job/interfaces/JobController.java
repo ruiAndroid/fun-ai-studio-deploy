@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import fun.ai.studio.deploy.runtime.run.application.DeployAppRunService;
@@ -48,14 +49,21 @@ public class JobController {
 
     @GetMapping("/{jobId}")
     public Result<JobResponse> get(@PathVariable String jobId) {
-        return Result.success(JobResponse.from(jobService.get(jobId)));
+        Job job = jobService.get(jobId);
+        RuntimeNode node = resolveRuntimeNode(job);
+        String previewUrl = buildPreviewUrl(job, node);
+        return Result.success(JobResponse.from(job, node, previewUrl));
     }
 
     @GetMapping
     public Result<List<JobResponse>> list(@RequestParam(defaultValue = "50") int limit) {
         return Result.success(
                 jobService.list(limit).stream()
-                        .map(JobResponse::from)
+                        .map(j -> {
+                            RuntimeNode node = resolveRuntimeNode(j);
+                            String previewUrl = buildPreviewUrl(j, node);
+                            return JobResponse.from(j, node, previewUrl);
+                        })
                         .collect(Collectors.toList())
         );
     }
@@ -91,7 +99,8 @@ public class JobController {
             }
         } catch (Exception ignore) {
         }
-        return Result.success(JobResponse.from(j, node));
+        String previewUrl = buildPreviewUrl(j, node);
+        return Result.success(JobResponse.from(j, node, previewUrl));
     }
 
     /**
@@ -115,7 +124,44 @@ public class JobController {
             if (appRunService != null) appRunService.touchFromJob(job);
         } catch (Exception ignore) {
         }
-        return Result.success(JobResponse.from(job));
+        RuntimeNode node = resolveRuntimeNode(job);
+        String previewUrl = buildPreviewUrl(job, node);
+        return Result.success(JobResponse.from(job, node, previewUrl));
+    }
+
+    private RuntimeNode resolveRuntimeNode(Job job) {
+        if (job == null) return null;
+        try {
+            Map<String, Object> payload = job.getPayload();
+            Object appId = payload == null ? null : payload.get("appId");
+            if (appId == null) return null;
+            return runtimePlacementService.resolveNode(String.valueOf(appId));
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private String buildPreviewUrl(Job job, RuntimeNode node) {
+        if (job == null || node == null) return null;
+        try {
+            String base = node.getGatewayBaseUrl();
+            if (base == null || base.isBlank()) return null;
+            base = base.trim();
+            if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
+
+            Map<String, Object> payload = job.getPayload();
+            String appId = String.valueOf(payload == null ? null : payload.get("appId"));
+            if (appId == null || appId.isBlank()) return null;
+
+            Object bp = payload == null ? null : payload.get("basePath");
+            String path = (bp == null ? "" : String.valueOf(bp)).trim();
+            if (path.isBlank()) path = "/apps/" + appId;
+            if (!path.startsWith("/")) path = "/" + path;
+            if (path.endsWith("/")) path = path.substring(0, path.length() - 1);
+            return base + path + "/";
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 }
 
