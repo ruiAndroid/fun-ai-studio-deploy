@@ -22,9 +22,9 @@ public class JobResponse {
      */
     private RuntimeNode runtimeNode;
     /**
-     * 可访问预览地址（由 runtimeNode.gatewayBaseUrl + basePath 计算而来）。
+     * 部署后的可访问地址（更推荐使用该字段；语义更清晰）。
      */
-    private String previewUrl;
+    private String deployUrl;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -48,9 +48,9 @@ public class JobResponse {
         return resp;
     }
 
-    public static JobResponse from(Job job, RuntimeNode runtimeNode, String previewUrl) {
+    public static JobResponse from(Job job, RuntimeNode runtimeNode, String deployUrl) {
         JobResponse resp = from(job, runtimeNode);
-        resp.setPreviewUrl(previewUrl);
+        resp.setDeployUrl(deployUrl);
         return resp;
     }
 
@@ -118,12 +118,12 @@ public class JobResponse {
         this.runtimeNode = runtimeNode;
     }
 
-    public String getPreviewUrl() {
-        return previewUrl;
+    public String getDeployUrl() {
+        return deployUrl;
     }
 
-    public void setPreviewUrl(String previewUrl) {
-        this.previewUrl = previewUrl;
+    public void setDeployUrl(String deployUrl) {
+        this.deployUrl = deployUrl;
     }
 
     public Instant getCreatedAt() {

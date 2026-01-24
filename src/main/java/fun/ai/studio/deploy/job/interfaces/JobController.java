@@ -51,8 +51,8 @@ public class JobController {
     public Result<JobResponse> get(@PathVariable String jobId) {
         Job job = jobService.get(jobId);
         RuntimeNode node = resolveRuntimeNode(job);
-        String previewUrl = buildPreviewUrl(job, node);
-        return Result.success(JobResponse.from(job, node, previewUrl));
+        String deployUrl = buildPreviewUrl(job, node);
+        return Result.success(JobResponse.from(job, node, deployUrl));
     }
 
     @GetMapping
@@ -61,8 +61,8 @@ public class JobController {
                 jobService.list(limit).stream()
                         .map(j -> {
                             RuntimeNode node = resolveRuntimeNode(j);
-                            String previewUrl = buildPreviewUrl(j, node);
-                            return JobResponse.from(j, node, previewUrl);
+                            String deployUrl = buildPreviewUrl(j, node);
+                            return JobResponse.from(j, node, deployUrl);
                         })
                         .collect(Collectors.toList())
         );
@@ -99,8 +99,8 @@ public class JobController {
             }
         } catch (Exception ignore) {
         }
-        String previewUrl = buildPreviewUrl(j, node);
-        return Result.success(JobResponse.from(j, node, previewUrl));
+        String deployUrl = buildPreviewUrl(j, node);
+        return Result.success(JobResponse.from(j, node, deployUrl));
     }
 
     /**
@@ -125,8 +125,8 @@ public class JobController {
         } catch (Exception ignore) {
         }
         RuntimeNode node = resolveRuntimeNode(job);
-        String previewUrl = buildPreviewUrl(job, node);
-        return Result.success(JobResponse.from(job, node, previewUrl));
+        String deployUrl = buildPreviewUrl(job, node);
+        return Result.success(JobResponse.from(job, node, deployUrl));
     }
 
     private RuntimeNode resolveRuntimeNode(Job job) {
