@@ -2,6 +2,7 @@ package fun.ai.studio.deploy.runtime.interfaces;
 
 import fun.ai.studio.common.Result;
 import fun.ai.studio.deploy.runtime.application.RuntimePlacementService;
+import fun.ai.studio.deploy.runtime.application.DeployAppPurgeService;
 import fun.ai.studio.deploy.runtime.client.RuntimeAgentClient;
 import fun.ai.studio.deploy.runtime.domain.RuntimeNode;
 import fun.ai.studio.deploy.runtime.run.application.DeployAppRunService;
@@ -24,13 +25,16 @@ public class DeployAppController {
     private final RuntimePlacementService placementService;
     private final RuntimeAgentClient runtimeAgentClient;
     private final DeployAppRunService appRunService;
+    private final DeployAppPurgeService purgeService;
 
     public DeployAppController(RuntimePlacementService placementService,
                                RuntimeAgentClient runtimeAgentClient,
-                               DeployAppRunService appRunService) {
+                               DeployAppRunService appRunService,
+                               DeployAppPurgeService purgeService) {
         this.placementService = placementService;
         this.runtimeAgentClient = runtimeAgentClient;
         this.appRunService = appRunService;
+        this.purgeService = purgeService;
     }
 
     /**
@@ -53,6 +57,19 @@ public class DeployAppController {
             if (appRunService != null) appRunService.touchStopped(appId);
         } catch (Exception ignore) {
         }
+        return Result.success(out);
+    }
+
+    /**
+     * 删除应用后的控制面数据清理（不操作 runtime 容器）。
+     * <p>
+     * 会清理：job 历史 / last-known 运行态 / placement。
+     */
+    @PostMapping("/purge")
+    public Result<Map<String, Object>> purge(@Valid @RequestBody StopDeployedAppRequest req) {
+        String appId = req.getAppId();
+        Map<String, Object> out = purgeService == null ? new HashMap<>() : purgeService.purge(appId);
+        out.put("userId", req.getUserId());
         return Result.success(out);
     }
 }

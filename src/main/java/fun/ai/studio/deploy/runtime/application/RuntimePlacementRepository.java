@@ -13,6 +13,13 @@ public interface RuntimePlacementRepository {
     List<RuntimePlacement> listByNodeId(Long nodeId, int limit, int offset);
 
     long countByNodeId(Long nodeId);
+
+    /**
+     * 清理 appId -> nodeId 粘性落点记录（删除应用后的控制面数据清理）。
+     *
+     * @return 删除条数（0/1）
+     */
+    long deleteByAppId(String appId);
 }
 
 

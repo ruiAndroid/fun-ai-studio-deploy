@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 
@@ -37,6 +38,9 @@ public interface JobJpaRepository extends JpaRepository<JobEntity, String> {
             order by j.createTime asc
             """)
     Page<JobEntity> findExpiredRunning(@Param("nowEpochMs") long nowEpochMs, Pageable pageable);
+
+    @Transactional
+    long deleteByAppId(String appId);
 }
 
 

@@ -123,6 +123,12 @@ public class JpaJobRepositoryAdapter implements JobRepository {
         return Optional.empty();
     }
 
+    @Override
+    public long deleteByAppId(String appId) {
+        if (appId == null || appId.isBlank()) return 0;
+        return jpa.deleteByAppId(appId);
+    }
+
     private Job toDomain(JobEntity e) {
         if (e == null) return null;
         Map<String, Object> payload = readPayload(e.getPayloadJson());

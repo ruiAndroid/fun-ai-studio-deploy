@@ -90,6 +90,21 @@ public class InMemoryJobRepository implements JobRepository {
             return Optional.of(claimed);
         }
     }
+
+    @Override
+    public long deleteByAppId(String appId) {
+        if (appId == null || appId.isBlank()) return 0;
+        long removed = 0;
+        for (String k : store.keySet()) {
+            Job j = store.get(k);
+            if (j == null) continue;
+            Object v = j.getPayload() == null ? null : j.getPayload().get("appId");
+            if (v == null) continue;
+            if (!appId.equals(String.valueOf(v))) continue;
+            if (store.remove(k, j)) removed++;
+        }
+        return removed;
+    }
 }
 
 

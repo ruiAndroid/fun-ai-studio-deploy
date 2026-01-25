@@ -62,6 +62,12 @@ public class JpaRuntimePlacementRepositoryAdapter implements RuntimePlacementRep
         return jpa.countByNodeId(nodeId);
     }
 
+    @Override
+    public long deleteByAppId(String appId) {
+        if (appId == null || appId.isBlank()) return 0;
+        return jpa.deleteByAppId(appId);
+    }
+
     private RuntimePlacement toDomain(RuntimePlacementEntity e) {
         if (e == null) return null;
         return new RuntimePlacement(e.getAppId(), new RuntimeNodeId(e.getNodeId()), e.getLastActiveAt());

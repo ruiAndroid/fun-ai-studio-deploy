@@ -58,6 +58,12 @@ public class InMemoryRuntimePlacementRepository implements RuntimePlacementRepos
         }
         return cnt;
     }
+
+    @Override
+    public long deleteByAppId(String appId) {
+        if (appId == null || appId.isBlank()) return 0;
+        return byAppId.remove(appId) == null ? 0 : 1;
+    }
 }
 
 

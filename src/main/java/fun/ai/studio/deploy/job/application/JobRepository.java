@@ -28,6 +28,13 @@ public interface JobRepository {
      * - 必须保证同一时刻只有一个 runner 能领取到同一个 job
      */
     Optional<Job> claimNext(String runnerId, Duration leaseDuration);
+
+    /**
+     * 清理指定 appId 的历史 Job（用于删除应用后的控制面数据清理）。
+     *
+     * @return 删除条数（best-effort；InMemory/JPA 语义一致）
+     */
+    long deleteByAppId(String appId);
 }
 
 

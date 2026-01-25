@@ -36,6 +36,12 @@ public class JpaDeployAppRunRepositoryAdapter implements DeployAppRunRepository 
         return jpa.findById(appId).map(this::toDomain);
     }
 
+    @Override
+    public long deleteByAppId(String appId) {
+        if (appId == null || appId.isBlank()) return 0;
+        return jpa.deleteByAppId(appId);
+    }
+
     private DeployAppRun toDomain(DeployAppRunEntity e) {
         if (e == null) return null;
         return new DeployAppRun(
