@@ -125,6 +125,27 @@ public final class Job {
     }
 
     /**
+     * 回收“过期租约”的 RUNNING 任务：RUNNING -> PENDING，并清空 runnerId/leaseExpireAt。
+     * <p>
+     * 说明：这是执行面容错所需的“超时回收”机制，不等同于业务层主动 transition。
+     */
+    public Job reclaimByLeaseTimeout() {
+        if (this.status != JobStatus.RUNNING) {
+            throw new ConflictException("仅 RUNNING 状态允许回收");
+        }
+        if (this.leaseExpireAt == null) {
+            // 没有 lease 视为可回收
+            Instant now = Instant.now();
+            return new Job(this.id, this.type, JobStatus.PENDING, this.payload, this.errorMessage, null, null, this.createdAt, now);
+        }
+        Instant now = Instant.now();
+        if (!this.leaseExpireAt.isBefore(now)) {
+            throw new ConflictException("lease 未过期，禁止回收");
+        }
+        return new Job(this.id, this.type, JobStatus.PENDING, this.payload, this.errorMessage, null, null, this.createdAt, now);
+    }
+
+    /**
      * runner 心跳续租：仅允许当前 runner 续租。
      */
     public Job heartbeat(String runnerId, Instant newLeaseExpireAt) {

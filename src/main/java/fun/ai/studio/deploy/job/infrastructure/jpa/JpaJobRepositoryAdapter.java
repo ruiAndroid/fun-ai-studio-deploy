@@ -76,7 +76,7 @@ public class JpaJobRepositoryAdapter implements JobRepository {
     @Override
     public boolean existsActiveJobForApp(String appId) {
         if (appId == null || appId.isBlank()) return false;
-        return jpa.existsByAppIdAndStatusIn(appId, List.of(JobStatus.PENDING.name(), JobStatus.RUNNING.name()));
+        return jpa.existsActiveJobForApp(appId, Instant.now().toEpochMilli());
     }
 
     @Override
@@ -88,13 +88,31 @@ public class JpaJobRepositoryAdapter implements JobRepository {
 
         // 多 runner 并发：用乐观锁重试，避免重复领取
         for (int i = 0; i < 20; i++) {
-            List<JobEntity> candidates = jpa.findByStatusOrderByCreateTimeAsc(JobStatus.PENDING.name(), PageRequest.of(0, 1))
+            JobEntity e = null;
+            List<JobEntity> pendingList = jpa.findByStatusOrderByCreateTimeAsc(JobStatus.PENDING.name(), PageRequest.of(0, 1))
                     .getContent();
-            if (candidates.isEmpty()) return Optional.empty();
-            JobEntity e = candidates.get(0);
+            if (!pendingList.isEmpty()) {
+                e = pendingList.get(0);
+            } else {
+                // 无 PENDING：尝试回收过期 RUNNING（避免永久卡死）
+                List<JobEntity> expired = jpa.findExpiredRunning(Instant.now().toEpochMilli(), PageRequest.of(0, 1)).getContent();
+                if (!expired.isEmpty()) {
+                    e = expired.get(0);
+                } else {
+                    return Optional.empty();
+                }
+            }
 
-            Job pending = toDomain(e);
-            Job claimed = pending.claim(runnerId, leaseExpireAt);
+            Job domain = toDomain(e);
+            Job claimed;
+            if (domain.getStatus() == JobStatus.RUNNING) {
+                // 过期回收：RUNNING(lease expired) -> PENDING -> claim
+                Job reclaimed = domain.reclaimByLeaseTimeout();
+                save(reclaimed); // 触发 version 变更
+                claimed = reclaimed.claim(runnerId, leaseExpireAt);
+            } else {
+                claimed = domain.claim(runnerId, leaseExpireAt);
+            }
             try {
                 save(claimed); // 触发 version 变更；并发冲突会抛 OptimisticLockingFailureException
                 return Optional.of(claimed);

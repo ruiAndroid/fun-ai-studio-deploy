@@ -44,8 +44,15 @@ public class InMemoryJobRepository implements JobRepository {
     public boolean existsActiveJobForApp(String appId) {
         if (appId == null || appId.isBlank()) return false;
         return store.values().stream()
-                .anyMatch(j -> (j.getStatus() == JobStatus.PENDING || j.getStatus() == JobStatus.RUNNING)
-                        && appId.equals(String.valueOf(j.getPayload() == null ? null : j.getPayload().get("appId"))));
+                .anyMatch(j -> {
+                    if (!appId.equals(String.valueOf(j.getPayload() == null ? null : j.getPayload().get("appId")))) return false;
+                    if (j.getStatus() == JobStatus.PENDING) return true;
+                    if (j.getStatus() == JobStatus.RUNNING) {
+                        Instant lease = j.getLeaseExpireAt();
+                        return lease != null && lease.isAfter(Instant.now());
+                    }
+                    return false;
+                });
     }
 
     @Override
@@ -63,7 +70,18 @@ public class InMemoryJobRepository implements JobRepository {
                     .findFirst();
 
             if (candidate.isEmpty()) {
-                return Optional.empty();
+                // 尝试回收过期 RUNNING
+                Optional<Job> expiredRunning = store.values().stream()
+                        .filter(j -> j.getStatus() == JobStatus.RUNNING)
+                        .filter(j -> j.getLeaseExpireAt() == null || j.getLeaseExpireAt().isBefore(Instant.now()))
+                        .sorted(Comparator.comparing(Job::getCreatedAt))
+                        .findFirst();
+                if (expiredRunning.isEmpty()) return Optional.empty();
+                Job reclaimed = expiredRunning.get().reclaimByLeaseTimeout();
+                store.put(reclaimed.getId().value(), reclaimed);
+                Job claimed = reclaimed.claim(runnerId, leaseExpireAt);
+                store.put(claimed.getId().value(), claimed);
+                return Optional.of(claimed);
             }
 
             Job pending = candidate.get();
