@@ -109,7 +109,13 @@ public class JobController {
     @PostMapping("/{jobId}/heartbeat")
     public Result<JobResponse> heartbeat(@PathVariable String jobId, @Valid @RequestBody HeartbeatJobRequest req) {
         if (runnerRegistry != null) runnerRegistry.touch(req == null ? null : req.getRunnerId());
-        Job job = jobService.heartbeat(jobId, req.getRunnerId(), Duration.ofSeconds(req.getExtendSeconds()));
+        Job job = jobService.heartbeat(
+                jobId,
+                req.getRunnerId(),
+                Duration.ofSeconds(req.getExtendSeconds()),
+                req.getPhase(),
+                req.getPhaseMessage()
+        );
         return Result.success(JobResponse.from(job));
     }
 

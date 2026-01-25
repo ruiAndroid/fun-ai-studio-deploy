@@ -121,7 +121,23 @@ public final class Job {
             throw new IllegalArgumentException("leaseExpireAt 不能为空");
         }
         Job claimed = transitionTo(JobStatus.RUNNING, null);
-        return new Job(this.id, this.type, claimed.status, this.payload, null, runnerId, leaseExpireAt, this.createdAt, claimed.updatedAt);
+
+        // 记录本次 RUNNING 的起始时间（用于全局超时判定）
+        Map<String, Object> newPayload = new HashMap<>(this.payload == null ? Collections.emptyMap() : this.payload);
+        long nowMs = Instant.now().toEpochMilli();
+        newPayload.put("runStartedAt", nowMs);
+        // attempt 仅用于展示/排障，不影响逻辑
+        try {
+            Object old = newPayload.get("attempt");
+            long n = 0;
+            if (old instanceof Number) n = ((Number) old).longValue();
+            else if (old != null) n = Long.parseLong(String.valueOf(old));
+            newPayload.put("attempt", n + 1);
+        } catch (Exception ignore) {
+            newPayload.put("attempt", 1);
+        }
+
+        return new Job(this.id, this.type, claimed.status, newPayload, null, runnerId, leaseExpireAt, this.createdAt, claimed.updatedAt);
     }
 
     /**
@@ -163,6 +179,23 @@ public final class Job {
         }
         Instant now = Instant.now();
         return new Job(this.id, this.type, this.status, this.payload, this.errorMessage, this.runnerId, newLeaseExpireAt, this.createdAt, now);
+    }
+
+    /**
+     * 更新 payload（用于心跳上报阶段信息等）。
+     * <p>
+     * 约定：patch 中 value==null 表示删除该 key。
+     */
+    public Job withPayloadPatch(Map<String, Object> patch) {
+        if (patch == null || patch.isEmpty()) return this;
+        Map<String, Object> newPayload = new HashMap<>(this.payload == null ? Collections.emptyMap() : this.payload);
+        for (Map.Entry<String, Object> e : patch.entrySet()) {
+            if (e.getKey() == null) continue;
+            if (e.getValue() == null) newPayload.remove(e.getKey());
+            else newPayload.put(e.getKey(), e.getValue());
+        }
+        Instant now = Instant.now();
+        return new Job(this.id, this.type, this.status, newPayload, this.errorMessage, this.runnerId, this.leaseExpireAt, this.createdAt, now);
     }
 
     public Job succeed() {
