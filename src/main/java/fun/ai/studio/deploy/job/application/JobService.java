@@ -7,6 +7,7 @@ import fun.ai.studio.deploy.job.domain.Job;
 import fun.ai.studio.deploy.job.domain.JobId;
 import fun.ai.studio.deploy.job.domain.JobStatus;
 import fun.ai.studio.deploy.job.domain.JobType;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -62,26 +63,41 @@ public class JobService {
         if (extendDuration == null || extendDuration.isZero() || extendDuration.isNegative()) {
             throw new IllegalArgumentException("extendDuration 必须为正数");
         }
-        Job job = get(jobId);
 
-        // 全局超时：RUNNING 超过 maxRunningSeconds 自动 FAILED（避免永久卡死）
-        Job timeouted = tryFailByMaxRunning(job);
-        if (timeouted != null) {
-            return jobRepository.save(timeouted);
+        // 可能存在并发 heartbeat（后台续租 + 阶段上报），JPA 乐观锁会冲突；这里做轻量重试避免 500。
+        for (int i = 0; i < 5; i++) {
+            Job job = get(jobId);
+
+            // 全局超时：RUNNING 超过 maxRunningSeconds 自动 FAILED（避免永久卡死）
+            Job timeouted = tryFailByMaxRunning(job);
+            if (timeouted != null) {
+                try {
+                    return jobRepository.save(timeouted);
+                } catch (OptimisticLockingFailureException ignore) {
+                    continue;
+                }
+            }
+
+            Instant newLeaseExpireAt = Instant.now().plus(extendDuration);
+            Job updated = job.heartbeat(runnerId, newLeaseExpireAt);
+
+            // 可选：写入执行阶段信息（落在 payload 里，便于 UI 展示/排障）
+            Map<String, Object> patch = new HashMap<>();
+            if (phase != null && !phase.isBlank()) patch.put("phase", phase.trim());
+            if (phaseMessage != null && !phaseMessage.isBlank()) patch.put("phaseMessage", phaseMessage.trim());
+            if (!patch.isEmpty()) {
+                updated = updated.withPayloadPatch(patch);
+            }
+
+            try {
+                return jobRepository.save(updated);
+            } catch (OptimisticLockingFailureException ignore) {
+                // retry with fresh version
+            }
         }
 
-        Instant newLeaseExpireAt = Instant.now().plus(extendDuration);
-        Job updated = job.heartbeat(runnerId, newLeaseExpireAt);
-
-        // 可选：写入执行阶段信息（落在 payload 里，便于 UI 展示/排障）
-        Map<String, Object> patch = new HashMap<>();
-        if (phase != null && !phase.isBlank()) patch.put("phase", phase.trim());
-        if (phaseMessage != null && !phaseMessage.isBlank()) patch.put("phaseMessage", phaseMessage.trim());
-        if (!patch.isEmpty()) {
-            updated = updated.withPayloadPatch(patch);
-        }
-
-        return jobRepository.save(updated);
+        // 重试仍失败：返回当前状态（避免 runner 因 heartbeat 500 直接判作任务失败）
+        return get(jobId);
     }
 
     private Job tryFailByMaxRunning(Job job) {
