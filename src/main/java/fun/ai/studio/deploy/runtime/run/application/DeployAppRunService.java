@@ -43,6 +43,32 @@ public class DeployAppRunService {
         );
         repo.save(run);
     }
+
+    /**
+     * 下线（stop）已部署应用：写入 last-known 运行态。
+     * <p>
+     * 注意：这里不代表“真相”，仅用于展示/审计；真相以 runtime-agent/status 探测为准。
+     */
+    public void touchStopped(String appId) {
+        if (appId == null || appId.isBlank()) return;
+        RuntimePlacement p = placementService.ensurePlacement(appId);
+        Long nodeId = (p.getNodeId() == null ? null : p.getNodeId().value());
+        long now = System.currentTimeMillis();
+
+        DeployAppRun prev = repo.findByAppId(appId).orElse(null);
+        Long lastDeployedAt = prev == null ? null : prev.getLastDeployedAt();
+
+        DeployAppRun run = new DeployAppRun(
+                appId,
+                nodeId,
+                null,
+                "STOPPED",
+                null,
+                lastDeployedAt,
+                now
+        );
+        repo.save(run);
+    }
 }
 
 

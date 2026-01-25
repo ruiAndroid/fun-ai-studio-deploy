@@ -17,11 +17,11 @@ import java.util.List;
  * - 可选 IP 白名单
  * - Header：X-DEPLOY-SECRET
  *
- * 仅保护：控制面会调用的 /deploy/jobs 创建/查询/列表/控制类接口。
+ * 保护：控制面会调用的 /deploy/** 接口（job + app 运维等）。
  * 放行：Runner 相关接口 claim/heartbeat/report（避免影响执行面）。
  */
 public class DeployProxyAuthFilter extends OncePerRequestFilter {
-    private static final String PREFIX = "/deploy/jobs";
+    private static final String PREFIX = "/deploy/";
     private static final String HDR = "X-DEPLOY-SECRET";
 
     private final DeployProxyAuthProperties props;
@@ -39,8 +39,8 @@ public class DeployProxyAuthFilter extends OncePerRequestFilter {
 
         // 放行 Runner：claim / heartbeat / report
         if (uri.equals("/deploy/jobs/claim")) return true;
-        if (uri.contains("/heartbeat")) return true;
-        if (uri.contains("/report")) return true;
+        if (uri.startsWith("/deploy/jobs/") && uri.contains("/heartbeat")) return true;
+        if (uri.startsWith("/deploy/jobs/") && uri.contains("/report")) return true;
         return false;
     }
 
