@@ -50,7 +50,7 @@ public class DeployAppController {
         out.put("nodeId", node.getId() == null ? null : node.getId().value());
         out.put("agentBaseUrl", node.getAgentBaseUrl());
 
-        Map resp = runtimeAgentClient.stopApp(node.getAgentBaseUrl(), appId);
+        Map resp = runtimeAgentClient.stopApp(node.getAgentBaseUrl(), String.valueOf(req.getUserId()), appId);
         out.put("runtime", resp);
 
         try {

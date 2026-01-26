@@ -24,8 +24,9 @@ public class RuntimeAgentClient {
         this.rest = new RestTemplate(buildFactory(props));
     }
 
-    public Map stopApp(String agentBaseUrl, String appId) {
+    public Map stopApp(String agentBaseUrl, String userId, String appId) {
         if (!StringUtils.hasText(agentBaseUrl)) throw new IllegalArgumentException("agentBaseUrl 不能为空");
+        if (!StringUtils.hasText(userId)) throw new IllegalArgumentException("userId 不能为空");
         if (!StringUtils.hasText(appId)) throw new IllegalArgumentException("appId 不能为空");
 
         String token = props == null ? null : props.getToken();
@@ -41,7 +42,7 @@ public class RuntimeAgentClient {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-Runtime-Token", token);
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(Map.of("appId", appId), headers);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(Map.of("userId", userId, "appId", appId), headers);
         ResponseEntity<Map> resp = rest.exchange(url, HttpMethod.POST, entity, Map.class);
         if (!resp.getStatusCode().is2xxSuccessful()) {
             throw new ConflictException("runtime-agent stop failed: http " + resp.getStatusCode().value());
