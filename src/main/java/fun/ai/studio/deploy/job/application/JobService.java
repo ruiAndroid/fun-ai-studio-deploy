@@ -51,6 +51,11 @@ public class JobService {
         return jobRepository.list(safeLimit);
     }
 
+    public List<Job> listByAppId(String appId, int limit) {
+        int safeLimit = Math.min(Math.max(limit, 1), 200);
+        return jobRepository.listByAppId(appId, safeLimit);
+    }
+
     public Optional<Job> claimNext(String runnerId, Duration leaseDuration) {
         return jobRepository.claimNext(runnerId, leaseDuration);
     }

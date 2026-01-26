@@ -105,6 +105,20 @@ public class InMemoryJobRepository implements JobRepository {
         }
         return removed;
     }
+
+    @Override
+    public List<Job> listByAppId(String appId, int limit) {
+        if (appId == null || appId.isBlank()) return List.of();
+        int safeLimit = Math.min(Math.max(limit, 1), 200);
+        return store.values().stream()
+                .filter(j -> {
+                    Object v = j.getPayload() == null ? null : j.getPayload().get("appId");
+                    return v != null && appId.equals(String.valueOf(v));
+                })
+                .sorted(Comparator.comparing(Job::getCreatedAt).reversed())
+                .limit(safeLimit)
+                .toList();
+    }
 }
 
 

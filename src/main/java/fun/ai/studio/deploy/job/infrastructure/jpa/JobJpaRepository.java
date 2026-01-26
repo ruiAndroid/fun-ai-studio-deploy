@@ -41,6 +41,8 @@ public interface JobJpaRepository extends JpaRepository<JobEntity, String> {
 
     @Transactional
     long deleteByAppId(String appId);
+
+    Page<JobEntity> findByAppIdOrderByCreateTimeDesc(String appId, Pageable pageable);
 }
 
 

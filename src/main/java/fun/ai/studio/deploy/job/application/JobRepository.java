@@ -35,6 +35,11 @@ public interface JobRepository {
      * @return 删除条数（best-effort；InMemory/JPA 语义一致）
      */
     long deleteByAppId(String appId);
+
+    /**
+     * 查询指定 appId 的 Job 历史（按创建时间倒序）。
+     */
+    List<Job> listByAppId(String appId, int limit);
 }
 
 

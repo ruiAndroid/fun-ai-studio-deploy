@@ -68,6 +68,23 @@ public class JobController {
         );
     }
 
+    /**
+     * 按 appId 查询部署历史（Job 列表）。
+     */
+    @GetMapping("/by-app")
+    public Result<List<JobResponse>> listByApp(@RequestParam String appId,
+                                               @RequestParam(defaultValue = "50") int limit) {
+        return Result.success(
+                jobService.listByAppId(appId, limit).stream()
+                        .map(j -> {
+                            RuntimeNode node = resolveRuntimeNode(j);
+                            String deployUrl = buildPreviewUrl(j, node);
+                            return JobResponse.from(j, node, deployUrl);
+                        })
+                        .collect(Collectors.toList())
+        );
+    }
+
     @PostMapping("/{jobId}/transition")
     public Result<JobResponse> transition(@PathVariable String jobId,
                                           @Valid @RequestBody TransitionJobRequest req) {

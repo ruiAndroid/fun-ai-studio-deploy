@@ -129,6 +129,17 @@ public class JpaJobRepositoryAdapter implements JobRepository {
         return jpa.deleteByAppId(appId);
     }
 
+    @Override
+    public List<Job> listByAppId(String appId, int limit) {
+        if (appId == null || appId.isBlank()) return List.of();
+        int safeLimit = Math.min(Math.max(limit, 1), 200);
+        return jpa.findByAppIdOrderByCreateTimeDesc(appId, PageRequest.of(0, safeLimit))
+                .getContent()
+                .stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
     private Job toDomain(JobEntity e) {
         if (e == null) return null;
         Map<String, Object> payload = readPayload(e.getPayloadJson());
