@@ -51,6 +51,33 @@ public class RuntimeAgentClient {
         return body == null ? Map.of("appId", appId, "status", "UNKNOWN") : body;
     }
 
+    public Map deleteApp(String agentBaseUrl, String userId, String appId) {
+        if (!StringUtils.hasText(agentBaseUrl)) throw new IllegalArgumentException("agentBaseUrl 不能为空");
+        if (!StringUtils.hasText(userId)) throw new IllegalArgumentException("userId 不能为空");
+        if (!StringUtils.hasText(appId)) throw new IllegalArgumentException("appId 不能为空");
+
+        String token = props == null ? null : props.getToken();
+        if (!StringUtils.hasText(token) || "CHANGE_ME".equals(token)) {
+            throw new ConflictException("deploy.runtime-agent.token 未配置，无法调用 runtime-agent delete");
+        }
+
+        String url = agentBaseUrl.trim();
+        if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
+        url = url + "/agent/apps/delete";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("X-Runtime-Token", token);
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(Map.of("userId", userId, "appId", appId), headers);
+        ResponseEntity<Map> resp = rest.exchange(url, HttpMethod.POST, entity, Map.class);
+        if (!resp.getStatusCode().is2xxSuccessful()) {
+            throw new ConflictException("runtime-agent delete failed: http " + resp.getStatusCode().value());
+        }
+        Map body = resp.getBody();
+        return body == null ? Map.of("appId", appId, "status", "UNKNOWN") : body;
+    }
+
     private static SimpleClientHttpRequestFactory buildFactory(RuntimeAgentClientProperties props) {
         int timeoutSec = props == null ? 10 : props.getTimeoutSeconds();
         int ms = Math.max(1, timeoutSec) * 1000;

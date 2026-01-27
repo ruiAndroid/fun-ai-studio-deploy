@@ -3,6 +3,7 @@ package fun.ai.studio.deploy.runtime.interfaces;
 import fun.ai.studio.common.Result;
 import fun.ai.studio.deploy.runtime.application.RuntimePlacementService;
 import fun.ai.studio.deploy.runtime.application.DeployAppPurgeService;
+import fun.ai.studio.deploy.runtime.application.DeployAppCleanupService;
 import fun.ai.studio.deploy.runtime.client.RuntimeAgentClient;
 import fun.ai.studio.deploy.runtime.domain.RuntimeNode;
 import fun.ai.studio.deploy.runtime.run.application.DeployAppRunService;
@@ -26,15 +27,18 @@ public class DeployAppController {
     private final RuntimeAgentClient runtimeAgentClient;
     private final DeployAppRunService appRunService;
     private final DeployAppPurgeService purgeService;
+    private final DeployAppCleanupService cleanupService;
 
     public DeployAppController(RuntimePlacementService placementService,
                                RuntimeAgentClient runtimeAgentClient,
                                DeployAppRunService appRunService,
-                               DeployAppPurgeService purgeService) {
+                               DeployAppPurgeService purgeService,
+                               DeployAppCleanupService cleanupService) {
         this.placementService = placementService;
         this.runtimeAgentClient = runtimeAgentClient;
         this.appRunService = appRunService;
         this.purgeService = purgeService;
+        this.cleanupService = cleanupService;
     }
 
     /**
@@ -70,6 +74,19 @@ public class DeployAppController {
         String appId = req.getAppId();
         Map<String, Object> out = purgeService == null ? new HashMap<>() : purgeService.purge(appId);
         out.put("userId", req.getUserId());
+        return Result.success(out);
+    }
+
+    /**
+     * 完整清理：runtime 容器/镜像 + 控制面数据。
+     * <p>
+     * 用于删除应用时一次性清理所有关联资源。
+     */
+    @PostMapping("/cleanup")
+    public Result<Map<String, Object>> cleanup(@Valid @RequestBody StopDeployedAppRequest req) {
+        String appId = req.getAppId();
+        String userId = String.valueOf(req.getUserId());
+        Map<String, Object> out = cleanupService == null ? new HashMap<>() : cleanupService.cleanup(userId, appId);
         return Result.success(out);
     }
 }
