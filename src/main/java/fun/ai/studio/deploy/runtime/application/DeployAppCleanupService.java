@@ -68,16 +68,29 @@ public class DeployAppCleanupService {
             if (harborClient != null && harborClient.isEnabled() && imageTags != null && !imageTags.isEmpty()) {
                 List<String> deleted = new ArrayList<>();
                 List<String> failed = new ArrayList<>();
+                Set<String> repos = new HashSet<>();
                 for (String img : imageTags) {
                     ImageRef ref = parseImage(img);
                     if (ref == null || ref.repository == null || ref.reference == null) continue;
+                    repos.add(ref.repository);
                     boolean ok = harborClient.deleteArtifact(ref.repository, ref.reference);
                     if (ok) deleted.add(img);
                     else failed.add(img);
                 }
+
+                // best-effort: delete repository entries too (so UI won't keep empty repos)
+                List<String> repoDeleted = new ArrayList<>();
+                List<String> repoFailed = new ArrayList<>();
+                for (String r : repos) {
+                    boolean ok = harborClient.deleteRepository(r);
+                    if (ok) repoDeleted.add(r);
+                    else repoFailed.add(r);
+                }
                 registryResult.put("enabled", true);
                 registryResult.put("deleted", deleted);
                 registryResult.put("failed", failed);
+                registryResult.put("repoDeleted", repoDeleted);
+                registryResult.put("repoFailed", repoFailed);
             } else {
                 registryResult.put("enabled", false);
             }

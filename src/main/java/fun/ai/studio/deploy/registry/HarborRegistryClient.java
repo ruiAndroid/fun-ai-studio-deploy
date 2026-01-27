@@ -96,6 +96,54 @@ public class HarborRegistryClient {
         }
     }
 
+    /**
+     * Delete a repository under the configured project (best-effort).
+     *
+     * Harbor API:
+     *  DELETE /api/v2.0/projects/{project}/repositories/{repo}
+     *
+     * Note: if artifacts still exist, Harbor may return 409/412; caller should delete artifacts first.
+     */
+    public boolean deleteRepository(String repository) {
+        if (!isEnabled()) return false;
+        if (!StringUtils.hasText(repository)) return false;
+
+        String base = props.getBaseUrl().trim();
+        if (!base.startsWith("http://") && !base.startsWith("https://")) {
+            base = "http://" + base;
+        }
+        if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
+
+        String projectRaw = props.getProject().trim();
+        String repoRaw = repository.trim();
+        if (repoRaw.startsWith(projectRaw + "/")) {
+            repoRaw = repoRaw.substring(projectRaw.length() + 1);
+        }
+
+        String project = urlEncodePath(projectRaw);
+        String repoEnc = urlEncodePath(repoRaw);
+        String url = base + "/api/v2.0/projects/" + project + "/repositories/" + repoEnc;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Authorization", basicAuth(props.getUsername().trim(), props.getPassword().trim()));
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> resp = rest.exchange(url, HttpMethod.DELETE, entity, String.class);
+            int code = resp.getStatusCode().value();
+            return code == 200 || code == 202 || code == 404;
+        } catch (HttpStatusCodeException e) {
+            int code = e.getStatusCode().value();
+            String body = e.getResponseBodyAsString();
+            if (code == 404) return true;
+            log.warn("harbor delete repo failed: http={} repo={} url={} body={}", code, repoRaw, url, body);
+            return false;
+        } catch (Exception ignore) {
+            return false;
+        }
+    }
+
     private static String basicAuth(String user, String pass) {
         String raw = user + ":" + pass;
         String b64 = Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
