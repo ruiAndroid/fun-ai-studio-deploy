@@ -2,6 +2,7 @@ package fun.ai.studio.deploy.runtime.application;
 
 import fun.ai.studio.deploy.job.application.JobRepository;
 import fun.ai.studio.deploy.job.domain.Job;
+import fun.ai.studio.deploy.registry.HarborRegistryClient;
 import fun.ai.studio.deploy.runtime.client.RuntimeAgentClient;
 import fun.ai.studio.deploy.runtime.domain.RuntimeNode;
 import fun.ai.studio.deploy.runtime.run.application.DeployAppRunService;
@@ -28,17 +29,20 @@ public class DeployAppCleanupService {
     private final RuntimeAgentClient runtimeAgentClient;
     private final DeployAppPurgeService purgeService;
     private final DeployAppRunService appRunService;
+    private final HarborRegistryClient harborClient; // optional (enabled via property)
 
     public DeployAppCleanupService(JobRepository jobRepo,
                                    RuntimePlacementService placementService,
                                    RuntimeAgentClient runtimeAgentClient,
                                    DeployAppPurgeService purgeService,
-                                   DeployAppRunService appRunService) {
+                                   DeployAppRunService appRunService,
+                                   HarborRegistryClient harborClient) {
         this.jobRepo = jobRepo;
         this.placementService = placementService;
         this.runtimeAgentClient = runtimeAgentClient;
         this.purgeService = purgeService;
         this.appRunService = appRunService;
+        this.harborClient = harborClient;
     }
 
     /**
@@ -56,6 +60,31 @@ public class DeployAppCleanupService {
         // 1. 从 job 历史收集 image tags（供后续 Harbor 清理或日志记录）
         Set<String> imageTags = collectImageTags(appId);
         out.put("imageTags", imageTags);
+
+        // 1.1 可选：删除 Harbor 远端镜像（best-effort）
+        Map<String, Object> registryResult = new HashMap<>();
+        try {
+            if (harborClient != null && harborClient.isEnabled() && imageTags != null && !imageTags.isEmpty()) {
+                List<String> deleted = new ArrayList<>();
+                List<String> failed = new ArrayList<>();
+                for (String img : imageTags) {
+                    ImageRef ref = parseImage(img);
+                    if (ref == null || ref.repository == null || ref.reference == null) continue;
+                    boolean ok = harborClient.deleteArtifact(ref.repository, ref.reference);
+                    if (ok) deleted.add(img);
+                    else failed.add(img);
+                }
+                registryResult.put("enabled", true);
+                registryResult.put("deleted", deleted);
+                registryResult.put("failed", failed);
+            } else {
+                registryResult.put("enabled", false);
+            }
+        } catch (Exception e) {
+            registryResult.put("enabled", true);
+            registryResult.put("error", e.getMessage());
+        }
+        out.put("registry", registryResult);
 
         // 2. 调用 runtime-agent delete（best-effort）
         Map<String, Object> runtimeResult = new HashMap<>();
@@ -94,6 +123,53 @@ public class DeployAppCleanupService {
         out.put("purge", purgeResult);
 
         return out;
+    }
+
+    private static class ImageRef {
+        final String repository; // e.g. funaistudio/u10000021-app20000470
+        final String reference;  // tag or digest, e.g. latest or sha256:...
+
+        private ImageRef(String repository, String reference) {
+            this.repository = repository;
+            this.reference = reference;
+        }
+    }
+
+    /**
+     * Parse image like:
+     *  - 172.21.138.103/funaistudio/u10000021-app20000470:latest
+     *  - 172.21.138.103/funaistudio/u10000021-app20000470@sha256:...
+     * into repository + reference for Harbor API.
+     */
+    private static ImageRef parseImage(String image) {
+        if (image == null || image.isBlank()) return null;
+        String s = image.trim();
+
+        // Split reference first (digest has precedence)
+        String repoPart = s;
+        String reference = null;
+        int at = s.indexOf('@');
+        if (at > 0) {
+            repoPart = s.substring(0, at);
+            reference = s.substring(at + 1);
+        } else {
+            int lastColon = s.lastIndexOf(':');
+            // If lastColon is after last '/', treat as tag separator
+            int lastSlash = s.lastIndexOf('/');
+            if (lastColon > 0 && lastColon > lastSlash) {
+                repoPart = s.substring(0, lastColon);
+                reference = s.substring(lastColon + 1);
+            } else {
+                reference = "latest";
+            }
+        }
+
+        // Strip registry host (first segment before '/')
+        int firstSlash = repoPart.indexOf('/');
+        if (firstSlash <= 0 || firstSlash >= repoPart.length() - 1) return null;
+        String repository = repoPart.substring(firstSlash + 1); // keep project/repo
+        if (repository.isBlank() || reference == null || reference.isBlank()) return null;
+        return new ImageRef(repository, reference);
     }
 
     /**
