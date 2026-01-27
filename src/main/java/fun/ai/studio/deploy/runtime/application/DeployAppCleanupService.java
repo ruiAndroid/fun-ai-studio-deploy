@@ -8,6 +8,7 @@ import fun.ai.studio.deploy.runtime.domain.RuntimeNode;
 import fun.ai.studio.deploy.runtime.run.application.DeployAppRunService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -36,13 +37,13 @@ public class DeployAppCleanupService {
                                    RuntimeAgentClient runtimeAgentClient,
                                    DeployAppPurgeService purgeService,
                                    DeployAppRunService appRunService,
-                                   HarborRegistryClient harborClient) {
+                                   ObjectProvider<HarborRegistryClient> harborClientProvider) {
         this.jobRepo = jobRepo;
         this.placementService = placementService;
         this.runtimeAgentClient = runtimeAgentClient;
         this.purgeService = purgeService;
         this.appRunService = appRunService;
-        this.harborClient = harborClient;
+        this.harborClient = harborClientProvider == null ? null : harborClientProvider.getIfAvailable();
     }
 
     /**
