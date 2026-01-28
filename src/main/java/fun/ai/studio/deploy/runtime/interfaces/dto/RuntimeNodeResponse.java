@@ -14,6 +14,10 @@ public class RuntimeNodeResponse {
     private Instant lastHeartbeatAt;
     private String health;
 
+    private Double diskFreePct;
+    private Long diskFreeBytes;
+    private Integer containerCount;
+
     public static RuntimeNodeResponse from(RuntimeNode n, String health) {
         RuntimeNodeResponse r = new RuntimeNodeResponse();
         r.setNodeId(n == null || n.getId() == null ? null : n.getId().value());
@@ -24,6 +28,9 @@ public class RuntimeNodeResponse {
         r.setWeight(n == null ? null : n.getWeight());
         r.setLastHeartbeatAt(n == null ? null : n.getLastHeartbeatAt());
         r.setHealth(health);
+        r.setDiskFreePct(n == null ? null : n.getDiskFreePct());
+        r.setDiskFreeBytes(n == null ? null : n.getDiskFreeBytes());
+        r.setContainerCount(n == null ? null : n.getContainerCount());
         return r;
     }
 
@@ -89,6 +96,30 @@ public class RuntimeNodeResponse {
 
     public void setHealth(String health) {
         this.health = health;
+    }
+
+    public Double getDiskFreePct() {
+        return diskFreePct;
+    }
+
+    public void setDiskFreePct(Double diskFreePct) {
+        this.diskFreePct = diskFreePct;
+    }
+
+    public Long getDiskFreeBytes() {
+        return diskFreeBytes;
+    }
+
+    public void setDiskFreeBytes(Long diskFreeBytes) {
+        this.diskFreeBytes = diskFreeBytes;
+    }
+
+    public Integer getContainerCount() {
+        return containerCount;
+    }
+
+    public void setContainerCount(Integer containerCount) {
+        this.containerCount = containerCount;
     }
 }
 

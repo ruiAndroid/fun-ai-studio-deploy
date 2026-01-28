@@ -21,7 +21,14 @@ public class InternalRuntimeNodeController {
 
     @PostMapping("/heartbeat")
     public Result<RuntimeNode> heartbeat(@Valid @RequestBody RuntimeNodeHeartbeatRequest req) {
-        RuntimeNode node = svc.heartbeat(req.getNodeName(), req.getAgentBaseUrl(), req.getGatewayBaseUrl());
+        RuntimeNode node = svc.heartbeat(
+                req.getNodeName(),
+                req.getAgentBaseUrl(),
+                req.getGatewayBaseUrl(),
+                req.getDiskFreePct(),
+                req.getDiskFreeBytes(),
+                req.getContainerCount()
+        );
         return Result.success(node);
     }
 }

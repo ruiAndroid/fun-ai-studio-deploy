@@ -87,7 +87,18 @@ public class AdminRuntimeNodeController {
         if (registryProps == null || !registryProps.isEnabled()) return "UNKNOWN";
         Instant at = n.getLastHeartbeatAt();
         if (at == null) return "STALE";
-        return at.isAfter(Instant.now().minus(registryProps.heartbeatStaleDuration())) ? "HEALTHY" : "STALE";
+        boolean fresh = at.isAfter(Instant.now().minus(registryProps.heartbeatStaleDuration()));
+        if (!fresh) return "STALE";
+
+        // disk-aware 策略下，根据磁盘水位判定 DRAINING
+        if ("disk-aware".equalsIgnoreCase(registryProps.getPlacementStrategy())) {
+            Double diskPct = n.getDiskFreePct();
+            if (diskPct != null) {
+                if (diskPct < registryProps.getDiskFreeMinPct()) return "UNHEALTHY";
+                if (diskPct < registryProps.getDiskFreeDrainPct()) return "DRAINING";
+            }
+        }
+        return "HEALTHY";
     }
 }
 

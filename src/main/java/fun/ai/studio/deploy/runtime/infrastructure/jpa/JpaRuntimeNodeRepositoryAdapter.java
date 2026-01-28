@@ -31,6 +31,9 @@ public class JpaRuntimeNodeRepositoryAdapter implements RuntimeNodeRepository {
         e.setEnabled(node.isEnabled() ? 1 : 0);
         e.setWeight(node.getWeight());
         e.setLastHeartbeatAt(toLocalDateTime(node.getLastHeartbeatAt()));
+        e.setDiskFreePct(node.getDiskFreePct());
+        e.setDiskFreeBytes(node.getDiskFreeBytes());
+        e.setContainerCount(node.getContainerCount());
         RuntimeNodeEntity saved = jpa.save(e);
         return toDomain(saved);
     }
@@ -65,7 +68,7 @@ public class JpaRuntimeNodeRepositoryAdapter implements RuntimeNodeRepository {
         LocalDateTime hb = e.getLastHeartbeatAt();
         if (hb == null) return base;
         Instant at = hb.atZone(ZoneId.systemDefault()).toInstant();
-        return base.heartbeat(at, e.getAgentBaseUrl(), e.getGatewayBaseUrl());
+        return base.heartbeat(at, e.getAgentBaseUrl(), e.getGatewayBaseUrl(), e.getDiskFreePct(), e.getDiskFreeBytes(), e.getContainerCount());
     }
 
     private static LocalDateTime toLocalDateTime(Instant at) {

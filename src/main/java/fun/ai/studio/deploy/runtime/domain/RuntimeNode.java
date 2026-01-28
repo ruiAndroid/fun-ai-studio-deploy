@@ -14,13 +14,21 @@ public final class RuntimeNode {
     private final int weight;
     private final Instant lastHeartbeatAt;
 
+    // 磁盘水位（用于调度选址）
+    private final Double diskFreePct;       // 0.0 ~ 100.0
+    private final Long diskFreeBytes;
+    private final Integer containerCount;
+
     private RuntimeNode(RuntimeNodeId id,
                         String name,
                         String agentBaseUrl,
                         String gatewayBaseUrl,
                         boolean enabled,
                         int weight,
-                        Instant lastHeartbeatAt) {
+                        Instant lastHeartbeatAt,
+                        Double diskFreePct,
+                        Long diskFreeBytes,
+                        Integer containerCount) {
         this.id = id;
         this.name = name;
         this.agentBaseUrl = agentBaseUrl;
@@ -28,6 +36,9 @@ public final class RuntimeNode {
         this.enabled = enabled;
         this.weight = weight;
         this.lastHeartbeatAt = lastHeartbeatAt;
+        this.diskFreePct = diskFreePct;
+        this.diskFreeBytes = diskFreeBytes;
+        this.containerCount = containerCount;
     }
 
     public static RuntimeNode create(RuntimeNodeId id,
@@ -36,7 +47,7 @@ public final class RuntimeNode {
                                      String gatewayBaseUrl,
                                      boolean enabled,
                                      int weight) {
-        return new RuntimeNode(id, name, agentBaseUrl, gatewayBaseUrl, enabled, weight, null);
+        return new RuntimeNode(id, name, agentBaseUrl, gatewayBaseUrl, enabled, weight, null, null, null, null);
     }
 
     public RuntimeNode heartbeat(Instant at, String agentBaseUrl, String gatewayBaseUrl) {
@@ -47,16 +58,34 @@ public final class RuntimeNode {
                 gatewayBaseUrl == null ? this.gatewayBaseUrl : gatewayBaseUrl,
                 this.enabled,
                 this.weight,
-                at == null ? Instant.now() : at
+                at == null ? Instant.now() : at,
+                this.diskFreePct,
+                this.diskFreeBytes,
+                this.containerCount
+        );
+    }
+
+    public RuntimeNode heartbeat(Instant at, String agentBaseUrl, String gatewayBaseUrl, Double diskFreePct, Long diskFreeBytes, Integer containerCount) {
+        return new RuntimeNode(
+                this.id,
+                this.name,
+                agentBaseUrl == null ? this.agentBaseUrl : agentBaseUrl,
+                gatewayBaseUrl == null ? this.gatewayBaseUrl : gatewayBaseUrl,
+                this.enabled,
+                this.weight,
+                at == null ? Instant.now() : at,
+                diskFreePct,
+                diskFreeBytes,
+                containerCount
         );
     }
 
     public RuntimeNode setEnabled(boolean enabled) {
-        return new RuntimeNode(this.id, this.name, this.agentBaseUrl, this.gatewayBaseUrl, enabled, this.weight, this.lastHeartbeatAt);
+        return new RuntimeNode(this.id, this.name, this.agentBaseUrl, this.gatewayBaseUrl, enabled, this.weight, this.lastHeartbeatAt, this.diskFreePct, this.diskFreeBytes, this.containerCount);
     }
 
     public RuntimeNode setWeight(int weight) {
-        return new RuntimeNode(this.id, this.name, this.agentBaseUrl, this.gatewayBaseUrl, this.enabled, weight, this.lastHeartbeatAt);
+        return new RuntimeNode(this.id, this.name, this.agentBaseUrl, this.gatewayBaseUrl, this.enabled, weight, this.lastHeartbeatAt, this.diskFreePct, this.diskFreeBytes, this.containerCount);
     }
 
     public RuntimeNodeId getId() {
@@ -85,6 +114,18 @@ public final class RuntimeNode {
 
     public Instant getLastHeartbeatAt() {
         return lastHeartbeatAt;
+    }
+
+    public Double getDiskFreePct() {
+        return diskFreePct;
+    }
+
+    public Long getDiskFreeBytes() {
+        return diskFreeBytes;
+    }
+
+    public Integer getContainerCount() {
+        return containerCount;
     }
 }
 

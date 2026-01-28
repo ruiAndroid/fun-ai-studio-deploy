@@ -45,6 +45,24 @@ public class RuntimeNodeEntity {
     @Column(name = "last_heartbeat_at", nullable = true)
     private LocalDateTime lastHeartbeatAt;
 
+    /**
+     * 磁盘可用百分比（0.0 ~ 100.0），用于调度选址。
+     */
+    @Column(name = "disk_free_pct", nullable = true)
+    private Double diskFreePct;
+
+    /**
+     * 磁盘可用字节数（可选，辅助展示/告警）。
+     */
+    @Column(name = "disk_free_bytes", nullable = true)
+    private Long diskFreeBytes;
+
+    /**
+     * 当前运行的用户应用容器数（可选，用于过载保护）。
+     */
+    @Column(name = "container_count", nullable = true)
+    private Integer containerCount;
+
     @Column(name = "create_time", nullable = true)
     private LocalDateTime createTime;
 
@@ -133,6 +151,30 @@ public class RuntimeNodeEntity {
 
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public Double getDiskFreePct() {
+        return diskFreePct;
+    }
+
+    public void setDiskFreePct(Double diskFreePct) {
+        this.diskFreePct = diskFreePct;
+    }
+
+    public Long getDiskFreeBytes() {
+        return diskFreeBytes;
+    }
+
+    public void setDiskFreeBytes(Long diskFreeBytes) {
+        this.diskFreeBytes = diskFreeBytes;
+    }
+
+    public Integer getContainerCount() {
+        return containerCount;
+    }
+
+    public void setContainerCount(Integer containerCount) {
+        this.containerCount = containerCount;
     }
 }
 

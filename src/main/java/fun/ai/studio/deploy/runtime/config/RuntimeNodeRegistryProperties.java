@@ -18,6 +18,21 @@ public class RuntimeNodeRegistryProperties {
     private String sharedSecret = "";
     private long heartbeatStaleSeconds = 60;
 
+    /**
+     * 调度策略：disk-aware（磁盘水位优先） / hash（一致性哈希，旧策略）
+     */
+    private String placementStrategy = "disk-aware";
+
+    /**
+     * 硬阈值：磁盘可用百分比低于此值的节点不可选（仅 disk-aware 策略生效）
+     */
+    private double diskFreeMinPct = 15.0;
+
+    /**
+     * 软阈值：磁盘可用百分比低于此值的节点标记为 DRAINING（不接新部署，但已有 placement 不迁移）
+     */
+    private double diskFreeDrainPct = 25.0;
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -52,6 +67,30 @@ public class RuntimeNodeRegistryProperties {
 
     public Duration heartbeatStaleDuration() {
         return Duration.ofSeconds(Math.max(1, heartbeatStaleSeconds));
+    }
+
+    public String getPlacementStrategy() {
+        return placementStrategy;
+    }
+
+    public void setPlacementStrategy(String placementStrategy) {
+        this.placementStrategy = placementStrategy;
+    }
+
+    public double getDiskFreeMinPct() {
+        return diskFreeMinPct;
+    }
+
+    public void setDiskFreeMinPct(double diskFreeMinPct) {
+        this.diskFreeMinPct = diskFreeMinPct;
+    }
+
+    public double getDiskFreeDrainPct() {
+        return diskFreeDrainPct;
+    }
+
+    public void setDiskFreeDrainPct(double diskFreeDrainPct) {
+        this.diskFreeDrainPct = diskFreeDrainPct;
     }
 }
 
