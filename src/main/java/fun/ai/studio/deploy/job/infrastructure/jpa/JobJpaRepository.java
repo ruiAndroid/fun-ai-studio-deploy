@@ -3,6 +3,7 @@ package fun.ai.studio.deploy.job.infrastructure.jpa;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +44,27 @@ public interface JobJpaRepository extends JpaRepository<JobEntity, String> {
     long deleteByAppId(String appId);
 
     Page<JobEntity> findByAppIdOrderByCreateTimeDesc(String appId, Pageable pageable);
+
+    /**
+     * 每个 app 最多保留最近 N 条 job 记录（按 create_time desc + id desc 排序）。
+     * 使用 MySQL 原生 SQL：delete + 子查询（双层 select 以绕过 "You can't specify target table" 限制）。
+     */
+    @Modifying
+    @Transactional
+    @Query(value = """
+            delete from fun_ai_deploy_job
+            where app_id = :appId
+              and id not in (
+                select id from (
+                  select id
+                  from fun_ai_deploy_job
+                  where app_id = :appId
+                  order by create_time desc, id desc
+                  limit :keep
+                ) t
+              )
+            """, nativeQuery = true)
+    int deleteOldByAppIdKeepLatest(@Param("appId") String appId, @Param("keep") int keep);
 }
 
 

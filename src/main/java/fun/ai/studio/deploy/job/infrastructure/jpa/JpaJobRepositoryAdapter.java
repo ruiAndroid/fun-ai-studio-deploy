@@ -9,6 +9,7 @@ import fun.ai.studio.deploy.job.domain.JobStatus;
 import fun.ai.studio.deploy.job.domain.JobType;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -26,6 +27,7 @@ public class JpaJobRepositoryAdapter implements JobRepository {
 
     private final JobJpaRepository jpa;
     private final ObjectMapper om;
+    private static final int KEEP_LATEST_PER_APP = 10;
 
     public JpaJobRepositoryAdapter(JobJpaRepository jpa, ObjectMapper om) {
         this.jpa = jpa;
@@ -33,14 +35,18 @@ public class JpaJobRepositoryAdapter implements JobRepository {
     }
 
     @Override
+    @Transactional
     public Job save(Job job) {
         if (job == null || job.getId() == null || job.getId().value() == null) {
             throw new IllegalArgumentException("job/id 不能为空");
         }
-        JobEntity e = jpa.findById(job.getId().value()).orElseGet(JobEntity::new);
+        Optional<JobEntity> existed = jpa.findById(job.getId().value());
+        boolean isNew = existed.isEmpty();
+        JobEntity e = existed.orElseGet(JobEntity::new);
         e.setId(job.getId().value());
         e.setType(job.getType() == null ? null : job.getType().name());
-        e.setAppId(extractAppId(job.getPayload()));
+        String appId = extractAppId(job.getPayload());
+        e.setAppId(appId);
         e.setStatus(job.getStatus() == null ? null : job.getStatus().name());
         e.setErrorMessage(job.getErrorMessage());
         e.setRunnerId(job.getRunnerId());
@@ -54,6 +60,16 @@ public class JpaJobRepositoryAdapter implements JobRepository {
             e.setUpdateTime(toLocalDateTime(job.getUpdatedAt()));
         }
         JobEntity saved = jpa.save(e);
+
+        // Retention: keep only latest N jobs per app (only when a NEW job is created).
+        // Avoid running this on heartbeat/status updates to reduce write amplification.
+        if (isNew && appId != null && !appId.isBlank()) {
+            try {
+                jpa.deleteOldByAppIdKeepLatest(appId, KEEP_LATEST_PER_APP);
+            } catch (Exception ignore) {
+                // best-effort: retention failure should not break job creation
+            }
+        }
         return toDomain(saved);
     }
 
